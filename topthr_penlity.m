@@ -1,6 +1,6 @@
  %%%% THRESHOLD DYNAMICS USING IMGAUSSFILT %%%%
 %** 最小单元尺度固定为1
-function [y, loop, c,  x, energies]=topthr_penlity(nelx, nely, volfrac, lambda, g, sd, bc, continuation, x, fileID)
+function [y, loop, c,  x, energies]=topthr_penlity(nelx, nely, volfrac, lambda, r, g, sd, bc, continuation, x, fileID)
 % nelx: number of elements on x axis
 % nely: number of elements on y axis
 % volfrac: volume fraction of material to total area
@@ -27,7 +27,10 @@ q    = [q1, q2]/nelx/nely; %设置热源，做尺度变换
 loop = 0;
 change = 100; %两次迭代中分布场xPhys的变化
 tol = 0.01;
-max_iter = 1000;
+max_iter = 500;
+sock = 1;
+gamma1 = 3;
+gamma2 = 1.5;
 %% DEFINE LOADS AND SUPPORTS assuming the mesh size is 1/nely
 switch bc
     case 'left_Dirichlet'
@@ -71,8 +74,8 @@ print_to_file= true;
 fid = fopen(fileID, 'wt');  % 'a' 表示 append 模式
 try 
     fprintf(fid, 'Displaying\n'); %若此行执行失败则执行catch后的内容
-    fprintf(fid,'Kapa:[%5.3f, %5.3f]|q:[%5.3f, %5.3f]|alpha:%5.6f|gamma:%5.6f\n',...
-        kapa(1),kapa(2),q1,q2,lambda,gamma);
+    fprintf(fid,'Kapa:[%5.3f, %5.3f]|q:[%5.3f, %5.3f]|lambda:%5.6f | r:%5.6f |gamma:%5.6f\n',...
+        kapa(1),kapa(2),q1,q2,lambda,r,gamma);
     fprintf(fid,'mesh:%5.6f | boundary condition:%s | continuation:%d\n',...
         1/nelx,bc,continuation);
 catch err
@@ -82,57 +85,71 @@ catch err
 end
 while change>tol && loop <= max_iter %只要变化大于0.01, 迭代不停
   loop = loop + 1;%迭代次数+1
-  [ce,cq,c] = solver_heat(xPhys,nelx,nely,freedofs);
+  if sock == 1
+    [ce,cq,c] = solver_heat(xPhys,nelx,nely,lambda,freedofs);
+  end
   energies(loop) = c; %记录总能
 
   %% threshold dynamics--filtering
   %\phi = (1/kapa(1)-1/kapa(2))G_tau*(\sigma:\sigma) - 
   %\gamma\sqrt(pi/\tau1)G_tau*(1-2x)
-  if sd > 0
-    ce = imgaussfilt(ce, sd, 'Padding', 'symmetric');
-    cq = imgaussfilt(cq, sd, 'Padding', 'symmetric');
-  end
+%   if sd > 0
+%     ce = imgaussfilt(ce, sd, 'Padding', 'symmetric');
+%     cq = imgaussfilt(cq, sd, 'Padding', 'symmetric');
+%   end
   perterm = 1-2*x;
   if sd > 0 
     perterm = imgaussfilt(perterm, sd);
   end
   %% threshold dynamics--thresholding
-  phi = -(kapa(1)-kapa(2))*ce + 2*(q(1)-q(2))*cq + gamma*perterm;
-  [sortedphi,I] = sort(phi(:)); %由小到大快速排序
-  thr = sortedphi(M);
-  %thresholding
-  if thr > 0   
-    xnew = 1 - double(phi>0);%phi(i) > 0, double(phi>0)(i) ==1
-  else
-    xnew = zeros(nelx*nely, 1);
-    xnew(I(1:M)) = 1; %最小的M个元是新的最优区域
-    xnew = reshape(xnew, nely, nelx);
-  end
+  phi = x + r*((kapa(1)-kapa(2))*ce + (q(1)-q(2))*cq);
   if sd > 0
-    xPhys = imgaussfilt(xnew, sd, 'Padding', 'symmetric');%	用自身的镜面反射填充图像。
-  else
-    xPhys = xnew;
+    phi = imgaussfilt(phi, sd, 'Padding', 'symmetric');
   end
-  change = norm(xnew-x,1);%计算更新前后的区域的无穷范数
-  x = xnew;
+  [~,I] = sort(phi(:),'descend'); %由小到大快速排序
+  %thresholding
+  xnew = zeros(nelx*nely, 1);
+  xnew(I(1:M)) = 1; %最大的M个元是新的最优区域
+  xnew = reshape(xnew, nely, nelx);
+  if sd > 0
+    x_temp = imgaussfilt(xnew, sd, 'Padding', 'symmetric');%	用自身的镜面反射填充图像。
+  else
+    x_temp = xnew;
+  end
+  %% PLOT DENSITIES
+  colormap(gray); imshow(1-x_temp); caxis([0 1]); axis equal; axis off; drawnow;
   %% PRINT RESULTS
   if print_to_file
-    fprintf(fid, ' It.:%5i ||Obj.:%10.6f ||Vol.:%7.3f ||ch.:%7.3f\n', loop, c, ...
-    mean(xPhys(:)),change); %mean: 计算xPhys的品均值
+    fprintf(fid, ' It.:%5i ||Obj.:%10.6f ||Vol.:%7.3f ||ch.:%7.3f || r.%5.9f \n', loop, c, ...
+    mean(xPhys(:)),change,r); %mean: 计算xPhys的品均值
   else
     fprintf(' It.:%5i ||Obj.:%10.6f ||Vol.:%7.3f ||ch.:%7.3f\n', loop, c, ...
     mean(xPhys(:)),change);
   end
-  %% PLOT DENSITIES
-  colormap(gray); imshow(1-xPhys); caxis([0 1]); axis equal; axis off; drawnow;
+  change = norm(xnew-x,1);%计算更新前后的区域的无穷范数
+  [~,~,c_temp] = solver_heat(x_temp,nelx,nely,lambda,freedofs);
+  sock = 1;
+  if mod(loop,10) == 0
+      r = 100;
+  end
+  if c_temp < energies(loop) && c_temp/energies(loop) > 0.99
+      r = r*gamma1;
+  elseif c_temp >= energies(loop)
+      r = r/gamma2;
+      sock = 0;
+      continue;
+  end
+  xPhys = x_temp;
+  x = xnew;
+  
 end
 set(gca,'Units','normalized','Position',[0 0 1 1]);  %# Modify axes size
-[~,~,c] = solver_heat(xPhys,nelx,nely,freedofs);
+[~,~,c] = solver_heat(xPhys,nelx,nely,lambda,freedofs);
 loop = loop + 1;
 energies(loop) = c; %计算最后的能
 
 %% FINAL OBJECTIVE FUNCTION WITHOUT SMOOTHING
-[~,~,y] = solver_heat(x,nelx,nely,freedofs);
+[~,~,y] = solver_heat(x,nelx,nely,lambda,freedofs);
 if print_to_file
     fprintf(fid, 'Thermal dissipation energy: %11.6f \n', y);
     fprintf(fid, '-----------------------------------------\n');
