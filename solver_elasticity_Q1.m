@@ -26,15 +26,8 @@ U(freedofs) = K(freedofs,freedofs)\F(freedofs); %U是状态的位移向量
 V(freedofs) = K(freedofs,freedofs)\H(freedofs); %V是伴随的位移向量
 
 %% 计算相关函数和泛函值
-%U(edofMat)每行表示一个单元的自由节点位移
-%ceU = reshape(sum((U(edofMat)*KE).*U(edofMat),2),nely,nelx); %每个单元的单位柔度 
-%ceV = reshape(sum((V(edofMat)*KE).*V(edofMat),2),nely,nelx);
 ceW = reshape(sum((U(edofMat)*KE).*V(edofMat),2),nely,nelx);
-%UU = 1./(1/Emin+xPhys*(1/E0-1/Emin)).*ceU; %柔度函数: h(\chi)C\sigma:\sigma
-UV = 1./(1/Emin+xPhys*(1/E0-1/Emin)).*ceW; %柔度函数: h(\chi)C\tau:\tau
-%VV = 1./(1/Emin+xPhys*(1/E0-1/Emin)).*ceV;%柔度函数: h(\chi)C\sigma:\tau
-%cU = sum(sum(UU)); %计算总柔度
-%cV = sum(sum(VV));
+UV = 1./(1/Emin+xPhys*(1/E0-1/Emin)).*ceW; %柔度函数: 1/A(\chi)E_0e(u):e(v)
 c = sum(sum(UV));
 
 end

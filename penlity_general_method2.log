@@ -266,3 +266,12 @@ Emin:66.66667 | E0:13333.33333 | gamma:0.000000 | tau:0.01000 | lambda:1.00000 |
  It.:   19 ||Obj.:  0.810948 ||Vol.:  0.300 ||ch.:  3.000 ||r.:30000.000 
  It.:   20 ||Obj.:  0.799757 ||Vol.:  0.300 ||ch.:  3.000 ||r.:30000.000 
  It.:   37 ||Obj.:  0.797124 ||Vol.:  0.300 ||ch.:  2.000 ||r.:137.019 
+Displaying
+bc:left_up_down_bdc_left_down_qin | objectfunc:right_down | Vforce:0.00000 | delta_x:0.01000 | volfrac:0.30000
+Emin:66.66667 | E0:13333.33333 | gamma:0.000000 | tau:0.01000 | lambda:1.00000 | w:5.00000 | gamma1:3.00000 | gamma2:1.50000
+Displaying
+bc:left_up_down_bdc_left_down_qin | objectfunc:right_down | Vforce:0.00000 | delta_x:0.01000 | volfrac:0.30000
+Emin:66.66667 | E0:13333.33333 | gamma:0.000000 | tau:0.01000 | lambda:1.00000 | w:5.00000 | gamma1:3.00000 | gamma2:1.50000
+ sharp interface energy:   73.465118
+--------------------------------------
+--------------------------------------
