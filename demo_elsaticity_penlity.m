@@ -1,7 +1,7 @@
 % save the following output to this folder
 save_to_folder = false;
 % fileID for log file
-fileID = 'penlity_general_method2.log';
+fileID = 'penlity_general_method3.log';
 logtype = 'a';
 % whether calculate compliance with respect to the same Emin
 sameEmin = 5e-5;

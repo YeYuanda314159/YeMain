@@ -159,6 +159,7 @@ while change>tol && loop < maxtimes%只要变化大于0.01, 迭代不停, 最多计算maxtimes
     xPhys_new = xnew;
   end
   [~,c] = solver_elasticity_Q1(xPhys_new,F,H,freedofs,nelx,nely,E0,Emin);
+  
   if (energies(loop)-c)/energies(loop) < 0.01 &&  energies(loop)>c
       r = r*gamma1;
   elseif energies(loop)<c
