@@ -1,31 +1,31 @@
 % save the following output to this folder
 save_to_folder = false;
 % fileID for log file
-fileID = 'penlity_general_method3.log';
+fileID = 'penlity_general_method.log';
 logtype = 'wt';
 % whether calculate compliance with respect to the same Emin
 sameEmin = 5e-5;
 same = false;
 % parameters
-volfrac = 0.18;          %体积比
+volfrac = 0.3;          %体积比
 nelx = 200;
-nely = 200; 
+nely = 100; 
 Emin = [0.05,0.01,0.005,0.002];            %人造材料的相对杨氏模量
 %bc = 'left_bdc_right_up_qin';
-bc = 'left_down_bdc_right_down_qin';%边界选
-%bc = 'left_up_down_bdc_left_down_qin';
+%bc = 'left_down_bdc_right_down_qin';%边界选
+bc = 'left_up_down_bdc_left_down_qin';
 %objectfunc = 'down_central';
-objectfunc = 'left_up';
-%objectfunc =  'right_down';
+%objectfunc = 'left_up';
+objectfunc =  'right_down';
 w = 4; %输出功权重
 g = 0.000;
 sd = 1;           %sd/nely 为卷积参数tau
 continuation = 0; %是否使用预设的形状x
 x = 1;            %预设形状x
-Vforce = 0.00;%体积力相对大小
+V_constrain = 1;%1：不等式体积约束；0：等式体积约束
 lambda = 1;
 r      = 1000; %邻近因子
-[y, loop, loop_k, c, x, energies, energies_k] = topthr_penlity_general(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x, fileID,logtype,Vforce);
+[y, loop, loop_k, c, x, energies, energies_k] = topthr_penlity_general(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x, fileID,logtype,V_constrain);
 %% 绘制目标函数收敛曲线对比
 figure('Position', [100, 100, 800, 600]);  % 设置图形窗口大小
 

@@ -1,6 +1,6 @@
 %%%% PENALTY METHOD USING IMGAUSSFILT %%%%
 %** 最小单元尺度固定为1
-function [y, loop, loop_k, c, x, energies, energies_k]=topthr_penlity_general(nelx, nely, lambda, r, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, fileID,logtype, Vforce)
+function [y, loop, loop_k, c, x, energies, energies_k]=topthr_penlity_general(nelx, nely, lambda, r, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, fileID,logtype, V_constrain)
 % nelx: number of elements on x axis
 % nely: number of elements on y axis
 % volfrac: volume fraction of material to total area
@@ -15,6 +15,7 @@ function [y, loop, loop_k, c, x, energies, energies_k]=topthr_penlity_general(ne
 %               0 indicates to use constant density as the initial guess
 % x: initial guess, if continuaton is 0, can be anything.
 % fileID: the opened file to log outputs
+% V_constrain: 
 % If you don't want to save the results, just let fileID to be negative 
 % and the results will be displayed in the command window
 % sameEmin: calculate the compliance each iteration using this specified value as Emin
@@ -85,14 +86,12 @@ gamma = g*sqrt(2*pi)/(sd*1/nely); %sd*1 = sd, 若想对分量求和应使用norm(sd,1) sd/
 energies = []; %存储每次迭代的目标函数值
 energies_k = []; %存储每次搜索的目标函数值
 %% START ITERATION
-%figure('Renderer', 'painters', 'Position', [90 90 1000 nely/nelx*1000]); 
-%在显示器的(90,90)位置开辟一个100(长)*(nely/nelx*100)(高)的图像窗口
 fid = fopen(fileID,logtype);
 print_to_file= true;
 try 
     fprintf(fid, 'Displaying\n'); %若此行执行失败则执行catch后的内容
     fprintf(fid, 'bc:%s | objectfunc:%s | Vforce:%3.5f | delta_x:%3.5f | volfrac:%3.5f\n',...
-        bc,objectfunc,Vforce,1/nely,volfrac);
+        bc,objectfunc,V_constrain,1/nely,volfrac);
     fprintf(fid, 'Emin:%5.5f | E0:%5.5f | gamma:%3f | tau:%5.5f | lambda:%5.5f | w:%5.5f | gamma1:%5.5f | gamma2:%5.5f\n',...
         Emin, E0, gamma, sd/nely, lambda,w, gamma1,gamma2);
 catch err
@@ -157,7 +156,11 @@ while 1
         [~,I] = sort(bar_Phi(:),'descend'); %由大到小快速排序
         % Project
         xnew = zeros(nelx*nely, 1);
-        xnew(I(1:M)) = 1; %最大的M个元是新的最优区域
+        if (bar_Phi(I(M)) > 0.5) || (V_constrain == 0)
+            xnew(I(1:M)) = 1; %最大的M个元是新的最优区域
+        else
+            xnew(bar_Phi > 0.5) = 1;
+        end
         xnew = reshape(xnew, nely, nelx);
         %调整邻近因子
         if sd > 0
