@@ -29,8 +29,6 @@ loop_k = 1; %线搜索循环
 change = 100; %两次迭代中分布场xPhys的变化
 tol = 2;
 max_iter = 500;
-gamma1 = 3;
-gamma2 = 1.5;
 r = r0; %默认最大邻近系数
 gamma = g*sqrt(2*pi/sd*1/nely); %sd*1 = sd, 若想对分量求和应使用norm(sd,1) sd/nely = tau
 energies = []; %存储每次迭代的能
@@ -112,7 +110,7 @@ while 1
         wk = gk;
     else
         betak = max(sum(sum(gk.*(gk-gk0)))/norm(gk0,2)^2,0); 
-        wk = gk - betak*wk;
+        wk = gk + betak*wk;
         gk0 = gk;
     end
     phi = wk;
