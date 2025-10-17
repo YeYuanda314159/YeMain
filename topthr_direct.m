@@ -1,6 +1,6 @@
 %%%% PENALTY METHOD USING IMGAUSSFILT %%%%
 %** 最小单元尺度固定为1
-function [y, loop, loop_k, c, x, energies, energies_k]=topthr_direct(nelx, nely, lambda, r0, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, filter_using, fileID,logtype, V_constrain)
+function [y, loop, loop_k, c, x, energies, energies_k]=topthr_direct(nelx, nely, lambda, r0, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, filter_using, fileID,logtype, V_constrain, descent_type)
 % nelx: number of elements on x axis
 % nely: number of elements on y axis
 % volfrac: volume fraction of material to total area
@@ -125,12 +125,15 @@ while 1
         gk = imgaussfilt(-(E0-Emin)*UV, sd, 'Padding', 'symmetric');
     end 
     gk = gk+ gamma*(x - xPhys);
-    if loop == 1
+    if loop == 1 && strcmp(descent_type, 'conjugate')
         gk0 = gk;
         Phi = gk;
-    else
+    elseif loop > 1 && strcmp(descent_type, 'conjugate')
         betak = max(sum(sum(gk.*(gk-gk0)))/norm(gk0,2)^2,0);
+        gk0 = gk;
         Phi = gk + betak*Phi;
+    else strcmp(descent_type, 'gradient')
+        Phi = gk;
     end
     if loop == 1
         r_min = 0;
@@ -162,7 +165,7 @@ while 1
             break;
         end
         loop_k = loop_k + 1;
-        bar_Phi = x - r*(Phi + gamma*(x - xPhys)); %计算L^\infty中的 局部极小Phi
+        bar_Phi = x - r*Phi; %计算L^\infty中的 局部极小Phi
         if sd > 0 && filter_using == 1
             bar_Phi = imgaussfilt(bar_Phi, sd, 'Padding', 'symmetric');%	用自身的镜面反射填充图像。
         end
@@ -182,7 +185,7 @@ while 1
             xPhys_new = xnew;
         end
         [UV,c] = solver_elasticity_Q1(xPhys_new,F,H,freedofs,nelx,nely,E0,Emin); %计算试探的目标函数值
-        PG = g*sum(sum((1-xnew).*xPhys_new)); %计算新的周长约束
+        PG = gamma*sum(sum((1-xnew).*xPhys_new)); %计算新的周长约束
         til_c = c + PG;
         energies_k(loop_k) = til_c;
         change = norm(xnew-x,1);%计算更新前后的区域的无穷范数

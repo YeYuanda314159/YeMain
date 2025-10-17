@@ -18,10 +18,11 @@ bc = 'left_up_down_bdc_left_down_qin';
 %objectfunc = 'left_up';
 objectfunc =  'right_down';
 w = 4; %输出功权重
-g = 0.000;
+g = 0.0000001;
 sd = 1;           %sd/nely 为卷积参数tau
+descent_type = 'gradient';
 continuation = 1; %是否使用预设的形状x
-filter_using = 1; %1:在更新时对预估解磨光；else: 不磨光
+filter_using = 0; %1:在更新时对预估解磨光；else: 不磨光
 x = zeros(nely,nelx);            %预设形状x
 V_constrain = 0;%1：不等式体积约束；0：等式体积约束
 lambda = 1;
@@ -56,7 +57,7 @@ x(Ind) = 1;
 if continuation == 1
     figure; imshow(1-x);
 end
-[y, loop, loop_k, c, x, energies, energies_k] = topthr_direct(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x,filter_using, fileID,logtype,V_constrain);
+[y, loop, loop_k, c, x, energies, energies_k] = topthr_direct(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x,filter_using, fileID,logtype,V_constrain,descent_type);
 %% 绘制目标函数收敛曲线对比
 figure('Position', [100, 100, 800, 600]);  % 设置图形窗口大小
 
