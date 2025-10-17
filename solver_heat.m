@@ -1,4 +1,4 @@
-function [ce,cq,c] = solver_heat(xPhys,nelx,nely,lambda,freedofs)
+function [ce,cq,c] = solver_heat(xPhys,nelx,nely,freedofs)
 %% MATERIAL PROPERTIES
 kapa = [10, 1];  %设置热导率
 q1 = 1; q2 = 100;
@@ -28,9 +28,7 @@ U(freedofs) = K(freedofs,freedofs)\F(freedofs); %U是位移向量
 
 %% OBJECTIVE FUNCTION AND SENSITIVITY ANALYSIS
 %U(edofMat)每行表示一个单元的自由节点位移
-ce = reshape(sum((U(edofMat)*KE).*U(edofMat),2),nely,nelx); %每个单元的单位柔度  
-%cq = -2*lambda/(lambda+2)*reshape(sum((U(edofMat)/4).*U(edofMat),2),nely,nelx);
-cq = -2*reshape(sum(U(edofMat)/4,2),nely,nelx);
+ce = reshape(sum((U(edofMat)*KE).*U(edofMat),2),nely,nelx); %每个单元的单位热量 
+cq = reshape(sum(U(edofMat)/4,2),nely,nelx); %每个单元的温度
 c = sum(sum((kapa(2)+xPhys*(kapa(1)-kapa(2))).*ce)); %计算总能
-%ce = ce*(3*lambda^2+6*lambda+4)/(lambda+2)^2;
 end
