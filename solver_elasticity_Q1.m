@@ -27,7 +27,6 @@ V(freedofs) = K(freedofs,freedofs)\H(freedofs); %V是伴随的位移向量
 
 %% 计算相关函数和泛函值
 ceW = reshape(sum((U(edofMat)*KE).*V(edofMat),2),nely,nelx);
-UV = (Emin+xPhys*(E0-Emin)).*ceW; %柔度函数: 1/A(\chi)E_0e(u):e(v)
+UV = ceW; %柔度函数: 1/A(\chi)E_0e(u):e(v)
 c = sum(sum(UV));
-
 end

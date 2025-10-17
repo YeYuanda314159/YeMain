@@ -20,12 +20,43 @@ objectfunc =  'right_down';
 w = 4; %输出功权重
 g = 0.000;
 sd = 1;           %sd/nely 为卷积参数tau
-continuation = 0; %是否使用预设的形状x
-x = 1;            %预设形状x
-V_constrain = 1;%1：不等式体积约束；0：等式体积约束
+continuation = 1; %是否使用预设的形状x
+filter_using = 1; %1:在更新时对预估解磨光；else: 不磨光
+x = zeros(nely,nelx);            %预设形状x
+V_constrain = 0;%1：不等式体积约束；0：等式体积约束
 lambda = 1;
 r      = 1000; %邻近因子
-[y, loop, loop_k, c, x, energies, energies_k] = topthr_direct(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x, fileID,logtype,V_constrain);
+xinitial = 3;
+switch xinitial
+    case 1 %中间一条1/5宽度的窄带
+        len = floor(nely*volfrac); 
+        lef = floor((nely-len)/2)+1;
+        rig = lef + len -1;
+        fixeddofs = [lef : rig]';
+        ind = repmat(fixeddofs,1,nelx)+repmat((0:nelx-1)*nely, len, 1);
+        Ind = reshape(ind, len*nelx,1);
+    case 2
+        len = floor(sqrt(nely*nelx*volfrac));
+        lef = floor((nely-len)/2)+1;
+        rig = lef + len -1;
+        fixeddofs = [lef : rig]';
+        ind = repmat(fixeddofs,1,len)+repmat(((lef-1):(rig-1))*nely, len, 1);
+        Ind = reshape(ind, len^2,1);
+    case 3
+        len = floor(nely*volfrac/2); 
+        lef = floor((nely-len)/2)+1;
+        rig = lef + len -1;
+        fixeddofs = [lef : rig]';
+        ind = repmat(fixeddofs,1,nelx)+repmat((0:nelx-1)*nely, len, 1);
+        Ind = union(reshape(ind, len*nelx,1), (((lef-1)*nely+1):(rig*nely))');
+    case 4
+        Ind = ones(nely,nelx);
+end   
+x(Ind) = 1;
+if continuation == 1
+    figure; imshow(1-x);
+end
+[y, loop, loop_k, c, x, energies, energies_k] = topthr_direct(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x,filter_using, fileID,logtype,V_constrain);
 %% 绘制目标函数收敛曲线对比
 figure('Position', [100, 100, 800, 600]);  % 设置图形窗口大小
 
@@ -62,4 +93,5 @@ text(0.02, 0.98, ...
      'Units', 'normalized', 'VerticalAlignment', 'top', ...
      'BackgroundColor', 'white', 'EdgeColor', 'black', ...
      'FontSize', 10);
-figure; imshow(1-x); 
+
+ figure; imshow(1-x);

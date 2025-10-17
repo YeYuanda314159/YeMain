@@ -1,6 +1,6 @@
 %%%% PENALTY METHOD USING IMGAUSSFILT %%%%
 %** 最小单元尺度固定为1
-function [y, loop, loop_k, c, x, energies, energies_k]=topthr_direct(nelx, nely, lambda, r0, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, fileID,logtype, V_constrain)
+function [y, loop, loop_k, c, x, energies, energies_k]=topthr_direct(nelx, nely, lambda, r0, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, filter_using, fileID,logtype, V_constrain)
 % nelx: number of elements on x axis
 % nely: number of elements on y axis
 % volfrac: volume fraction of material to total area
@@ -22,7 +22,7 @@ function [y, loop, loop_k, c, x, energies, energies_k]=topthr_direct(nelx, nely,
 % return c: compliance computed with filtered chi
 %% OPTIMIZATION PARAMETERS
 tol = 0.1;   %容许变化
-maxtimes = 50;  %最大迭代次数
+maxtimes = 100;  %最大迭代次数
 gamma1 = 3;
 gamma2 = 1.5;
 r = r0;
@@ -101,7 +101,8 @@ catch err
     disp('Now display the output in the command window.')
     print_to_file=false;
 end
-
+%创建固定的图像窗口
+ax = axes('Parent', gcf);
 while 1
     if change <= tol  %只要变化大于0.01, 迭代不停
         fprintf('收敛原因2：自变量无法更新！');
@@ -113,7 +114,7 @@ while 1
     %% OBJECTIVE FUNCTION AND SENSITIVITY ANALYSIS
     if loop == 1
         [UV,c] = solver_elasticity_Q1(xPhys,F,H,freedofs,nelx,nely,E0,Emin);
-        PG = g*sum(sum((1-x).*xPhys));
+        PG = gamma*sum(sum((1-x).*xPhys));
         energies(loop) = c+PG; %记录目标函数值
         energies_k(loop_k) = energies(loop);
     end
@@ -121,7 +122,7 @@ while 1
     %% Penalty Method--calculate Phi = G_\epsilon*(E_0e(u):e(v))+ gamma/\epsilon*(x - xPhys)
     % filtering
     if sd > 0 
-        gk = imgaussfilt(UV, sd, 'Padding', 'symmetric');
+        gk = imgaussfilt(-(E0-Emin)*UV, sd, 'Padding', 'symmetric');
     end 
     gk = gk+ gamma*(x - xPhys);
     if loop == 1
@@ -155,13 +156,16 @@ while 1
     end
     %% Penalty Method--linear research
     while 1
-        if (loop_k - loop) > maxtimes
+        if loop_k > maxtimes
             change = 0;
             fprintf('线搜索结束1：超过线搜索次数！');
             break;
         end
         loop_k = loop_k + 1;
         bar_Phi = x - r*(Phi + gamma*(x - xPhys)); %计算L^\infty中的 局部极小Phi
+        if sd > 0 && filter_using == 1
+            bar_Phi = imgaussfilt(bar_Phi, sd, 'Padding', 'symmetric');%	用自身的镜面反射填充图像。
+        end
         [~,I] = sort(bar_Phi(:),'descend'); %由大到小快速排序
         % Project
         xnew = zeros(nelx*nely, 1);
@@ -182,6 +186,12 @@ while 1
         til_c = c + PG;
         energies_k(loop_k) = til_c;
         change = norm(xnew-x,1);%计算更新前后的区域的无穷范数
+        %输出新图像
+        cla(ax);  % 清除当前axes内容（保留axes设置）
+        imshow(1-xnew, [], 'Parent', ax);  % 在同一axes显示新图像
+        title(ax, sprintf('迭代 %d/%d', loop_k, maxtimes));
+        colormap(ax, gray);
+        drawnow;
         % PRINT RESULTS
         if print_to_file
             fprintf(fid, ' It.:%5i ||Obj.:%10.6f ||Vol.:%7.3f ||ch.:%7.3f ||r.:%7.3f \n', loop_k, til_c, ...
@@ -190,8 +200,6 @@ while 1
             fprintf(' It.:%5i Obj.:%10.6f Vol.:%7.3f ch.:%7.3f r.%7.3f:\n', loop_k, til_c,...
             mean(xPhys(:)),change,r);
         end
-        % PLOT DENSITIES 输出优化的形状
-        colormap(gray); imshow(1-xPhys); caxis([0 1]); axis equal; axis off; drawnow;
         if til_c > energies(loop)
           r_max = r;
           if change <= 1
@@ -220,13 +228,16 @@ while 1
         end
     end
 end
-set(gca,'Units','normalized','Position',[0 0 10 10]);  %# Modify axes size
-
 [~,c] = solver_elasticity_Q1(x,F,H,freedofs,nelx,nely,E0,Emin);
+if sd > 0
+    xPhys = imgaussfilt(x, sd, 'Padding', 'symmetric');%	用自身的镜面反射填充图像。
+else
+    xPhys = x;
+end
 loop = loop + 1;
 energies(loop) = c+gamma*(sum(sum((1-x).*xPhys))); %计算最后的目标函数值
 %% FINAL OBJECTIVE FUNCTION WITHOUT SMOOTHING
-[~,y] = solver_elasticity_Q1(x,F,H,freedofs,nelx,nely,E0,Emin);
+y = energies(loop);
 if print_to_file
     fprintf(fid, ' sharp interface energy: %11.6f\n', y);
     fprintf(fid, '--------------------------------------\n');
