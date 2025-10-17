@@ -1,7 +1,7 @@
 % save the following output to this folder
 save_to_folder = false;
 % fileID for log file
-fileID = 'penlity_general_method.log';
+fileID = 'penlity_direct_method.log';
 logtype = 'wt';
 % whether calculate compliance with respect to the same Emin
 sameEmin = 5e-5;
@@ -25,7 +25,7 @@ x = 1;            %预设形状x
 V_constrain = 1;%1：不等式体积约束；0：等式体积约束
 lambda = 1;
 r      = 1000; %邻近因子
-[y, loop, loop_k, c, x, energies, energies_k] = topthr_penlity_general(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x, fileID,logtype,V_constrain);
+[y, loop, loop_k, c, x, energies, energies_k] = topthr_direct(nelx, nely, lambda, r, volfrac, Emin(3), g, sd, objectfunc,bc, w,continuation, x, fileID,logtype,V_constrain);
 %% 绘制目标函数收敛曲线对比
 figure('Position', [100, 100, 800, 600]);  % 设置图形窗口大小
 

@@ -18,7 +18,7 @@ jK = reshape(kron(edofMat,ones(1,8))',64*nelx*nely,1);%用于装配刚度矩阵
 %% 求解
 U = zeros(2*(nely + 1)*(nelx + 1), 1); %约束的解向量
 V = zeros(2*(nely + 1)*(nelx + 1), 1); %目标函数对应的解向量
-sK = reshape(KE(:)*(1./(1/Emin+xPhys(:)'*(1/E0-1/Emin))), 64*nelx*nely, 1);%混合问题
+sK = reshape(KE(:)*(Emin+xPhys(:)'*(E0-Emin)), 64*nelx*nely, 1);%混合问题
 %重排前的矩阵每一列表示一个物理单元的刚度矩阵
 %xPhys(:),表示按列取数据将矩阵变成一列向量
 K = sparse(iK,jK,sK); K = (K+K')/2; %装配整体刚度矩阵并保证对称性
@@ -27,7 +27,7 @@ V(freedofs) = K(freedofs,freedofs)\H(freedofs); %V是伴随的位移向量
 
 %% 计算相关函数和泛函值
 ceW = reshape(sum((U(edofMat)*KE).*V(edofMat),2),nely,nelx);
-UV = 1./(1/Emin+xPhys*(1/E0-1/Emin)).*ceW; %柔度函数: 1/A(\chi)E_0e(u):e(v)
+UV = (Emin+xPhys*(E0-Emin)).*ceW; %柔度函数: 1/A(\chi)E_0e(u):e(v)
 c = sum(sum(UV));
 
 end
