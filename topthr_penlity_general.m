@@ -1,6 +1,7 @@
 %%%% PENALTY METHOD USING IMGAUSSFILT %%%%
 %** 最小单元尺度固定为1
-function [y, loop, loop_k, c, x, energies, energies_k]=topthr_penlity_general(nelx, nely, lambda, r, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, fileID,logtype, V_constrain)
+function [y, loop, loop_k, c, x, energies, energies_k]= ...
+    topthr_penlity_general(nelx, nely, lambda, r0, volfrac, frac, g, sd, objectfunc, bc, w,continuation, x, fileID,logtype, V_constrain, descent_type)
 % nelx: number of elements on x axis
 % nely: number of elements on y axis
 % volfrac: volume fraction of material to total area
@@ -21,10 +22,18 @@ function [y, loop, loop_k, c, x, energies, energies_k]=topthr_penlity_general(ne
 % sameEmin: calculate the compliance each iteration using this specified value as Emin
 % return c: compliance computed with filtered chi
 %% OPTIMIZATION PARAMETERS
-tol = 0.1;   %容许变化
-maxtimes = 50;  %最大迭代次数
+tol = 1;   %容许变化
+maxtimes = 100;  %最大迭代次数
+r = r0;
 gamma1 = 3;
 gamma2 = 1.5;
+M = floor(nelx*nely*volfrac); %向下取整，\Omega1的元的数量
+loop = 1;
+loop_k = 1;
+change = 10; %两次迭代中分布场xPhys的变化
+gamma = g*sqrt(2*pi)/(sd*1/nely); %sd*1 = sd, 若想对分量求和应使用norm(sd,1) sd/nely = tau
+energies = []; %存储每次迭代的目标函数值
+energies_k = []; %存储每次搜索的目标函数值
 %% MATERIAL PROPERTIES
 E0 = 5000*8/3;  %设置杨氏模量
 Emin = E0*frac; %设置人工材料的杨氏模量
@@ -33,9 +42,8 @@ Emin = E0*frac; %设置人工材料的杨氏模量
 Fin = zeros(2*(nely+1)*(nelx+1),1);
 Hout = zeros(2*(nely+1)*(nelx+1),1);
 switch bc
-    case 'left_bdc_right_up_qin'
-        Fin(2*(nely+1)*nelx+2,1) = -1; %F(2,1) = -1, 表示右上节点受到向下大小为1的点力
-        fixeddofs = 1:2*(nely+1); %左边界横向
+    case 'left_bdc'
+        fixeddofs = 1:2*(nely+1); %左边界
     case 'left_down_bdc_right_down_qin'
         force_length = floor(nelx/10); %1/10宽的边受力
         %sparse(参数1，参数2，参数3，参数4，参数5);
@@ -49,9 +57,9 @@ switch bc
         fixeddofs = union(1 : 2*force_length,(2*(nely+1)*(1:(nelx+1))));  
 end
 switch objectfunc %伴随问题的Dirichlet边界同元问题相同
-    case 'down_central'
-        %下边中点的单位位移
-        Hout(2*(nely + 1) * floor((nelx+1)/2), 1) = 1;
+    case 'right_down_central'
+        %右边中点的单位位移
+        Hout(2*(nely + 1) * nelx + 2*floor((nely+1)/2), 1) = -1;
     case 'left_up'
         force_length = floor(nelx/10);
         Hout(2+(2*(nely+1)*(0:force_length))) = -1; %H(2,1) = -1, 表示1号节点受到向下大小为1的点力
@@ -78,13 +86,7 @@ else
         xPhys = x;
     end
 end
-M = floor(nelx*nely*volfrac); %向下取整，\Omega1的元的数量
-loop = 1;
-loop_k = 1;
-change = 10; %两次迭代中分布场xPhys的变化
-gamma = g*sqrt(2*pi)/(sd*1/nely); %sd*1 = sd, 若想对分量求和应使用norm(sd,1) sd/nely = tau
-energies = []; %存储每次迭代的目标函数值
-energies_k = []; %存储每次搜索的目标函数值
+
 %% START ITERATION
 fid = fopen(fileID,logtype);
 print_to_file= true;
@@ -99,13 +101,14 @@ catch err
     disp('Now display the output in the command window.')
     print_to_file=false;
 end
-
+%创建固定的图像窗口
+ax = axes('Parent', gcf);
 while 1
-    if change <= tol  %只要变化大于0.01, 迭代不停
-        fprintf('收敛原因2：自变量无法更新！');
+    if change < tol  %只要变化大于0.01, 迭代不停
+        fprintf('收敛原因2：自变量无法更新！\n');
         break;
     elseif loop > maxtimes %最多计算maxtimes次
-        fprintf('收敛原因3：达到最大迭代次数！');
+        fprintf('收敛原因3：达到最大迭代次数！\n');
         break;
     end
     %% OBJECTIVE FUNCTION AND SENSITIVITY ANALYSIS
@@ -117,12 +120,23 @@ while 1
     end
     
     %% Penalty Method--calculate Phi = (1/E0-1/Emin)G_\epsilon*(E_0^{-1}\sigma:\varrho)+ gamma/\epsilon*(x - xPhys)
-    Phi = 1./(1/Emin+xPhys*(1/E0-1/Emin)).*UV; %E_0^{-1}\sigma:\varrho = 1/A(\chi)^2 Ee(u):e(v)
+    gk = 1./(1/Emin+xPhys*(1/E0-1/Emin)).*UV; %E_0^{-1}\sigma:\varrho = 1/A(\chi)^2 Ee(u):e(v)
     % filtering
     if sd > 0 
-    Phi = imgaussfilt(Phi, sd, 'Padding', 'symmetric');
+        gk = imgaussfilt(gk, sd, 'Padding', 'symmetric');
     end 
-    Phi = ((1/E0-1/Emin)*Phi+ g*(x - xPhys));
+    gk = ((1/E0-1/Emin)*gk+ g*(x - xPhys));
+    %共轭梯度法
+    if loop == 1 && strcmp(descent_type, 'conjugate')
+        gk0 = gk;
+        Phi = gk;
+    elseif loop > 1 && strcmp(descent_type, 'conjugate')
+        betak = max(sum(sum(gk.*(gk-gk0)))/norm(gk0,2)^2,0);
+        gk0 = gk;
+        Phi = gk + betak*Phi;
+    elseif strcmp(descent_type, 'gradient')
+        Phi = gk;
+    end
     if loop == 1
         r_min = 0;
     else
@@ -135,7 +149,7 @@ while 1
         max_val_indx1 = max(Phi(indx1));  % indx1中最大值
         min_val_indx0 = min(Phi(indx0));  % indx0中最小值
         if max_val_indx1 <= min_val_indx0 %满足一阶最优性条件，迭代终止
-            fprintf('收敛原因1：达到一阶最优性条件！');
+            fprintf('收敛原因1：达到一阶最优性条件！\n');
             break;
         end
         r_min = 1/(max_val_indx1 - min_val_indx0);
@@ -143,12 +157,14 @@ while 1
     sorted_A = sort(Phi(:));  % 从大到小排序成向量
     min_spacing = min(diff(sorted_A)); % 相邻元素最小间距
     if r <= r_min + 1;
-        r = 1/min_spacing;
+        r = min(1/min_spacing,r0);
+        r_max = r;
     end
     %% Penalty Method--linear research
     while 1
-        if (loop_k - loop) > maxtimes
+        if loop_k > maxtimes
             change = 0;
+            fprintf('线搜索结束4：超出最大迭代次数！\n');
             break;
         end
         loop_k = loop_k + 1;
@@ -164,15 +180,21 @@ while 1
         xnew = reshape(xnew, nely, nelx);
         %调整邻近因子
         if sd > 0
-        xPhys_new = imgaussfilt(xnew, sd, 'Padding', 'symmetric');%	用自身的镜面反射填充图像。
+            xPhys_new = imgaussfilt(xnew, sd, 'Padding', 'symmetric');%	用自身的镜面反射填充图像。
         else
-        xPhys_new = xnew;
+            xPhys_new = xnew;
         end
         [UV,c] = solver_elasticity_Q1(xPhys_new,F,H,freedofs,nelx,nely,E0,Emin); %计算试探的目标函数值
         PG = g*sum(sum((1-xnew).*xPhys_new)); %计算新的周长约束
         til_c = c + PG;
         energies_k(loop_k) = til_c;
         change = norm(xnew-x,1);%计算更新前后的区域的无穷范数
+        %输出新图像
+        cla(ax);  % 清除当前axes内容（保留axes设置）
+        imshow(1-xnew, [], 'Parent', ax);  % 在同一axes显示新图像
+        title(ax, sprintf('迭代 %d/%d', loop_k, maxtimes));
+        colormap(ax, gray);
+        drawnow;
         % PRINT RESULTS
         if print_to_file
             fprintf(fid, ' It.:%5i ||Obj.:%10.6f ||Vol.:%7.3f ||ch.:%7.3f ||r.:%7.3f \n', loop_k, til_c, ...
@@ -181,12 +203,11 @@ while 1
             fprintf(' It.:%5i Obj.:%10.6f Vol.:%7.3f ch.:%7.3f r.%7.3f:\n', loop_k, til_c,...
             mean(xPhys(:)),change,r);
         end
-        % PLOT DENSITIES 输出优化的形状
-        colormap(gray); imshow(1-xPhys); caxis([0 1]); axis equal; axis off; drawnow;
         if til_c > energies(loop)
           r_max = r;
-          if change <= 1
+          if change < 2
               change = 0;
+              fprintf('线搜索结束2：自变量不能更新！\n');
               break;
           end
         elseif (til_c < energies(loop)) % && ((energies(loop) - til_c)/energies(loop) > 0.001)
@@ -194,26 +215,27 @@ while 1
           xPhys = xPhys_new;
           loop = loop + 1;
           energies(loop) = til_c;
+          fprintf('线搜索结束1：目标函数下降！\n');
           break;
-%         elseif (til_c < energies(loop)) && ((energies(loop) - til_c)/energies(loop) < 0.001)
-%             r = r*gamma2;
-%             continue;
-        elseif (til_c == energies(loop)) && (change > tol)
-          r_max = r;
+        elseif til_c == energies(loop) && change > tol
+            r_max = r;
         end
         if change == 0;
-          r_min = r;
+            r_min = r;
         end
         r = (r_max + r_min)/2;
+        if abs(r_max-r_min) < 10^-3
+            change = 0;
+            fprintf('线搜索结束3：搜索区间过小！\n');
+            break;
+        end
     end
 end
-set(gca,'Units','normalized','Position',[0 0 10 10]);  %# Modify axes size
-
 [~,c] = solver_elasticity_Q1(x,F,H,freedofs,nelx,nely,E0,Emin);
 loop = loop + 1;
 energies(loop) = c+g*(sum(sum((1-x).*xPhys))); %计算最后的目标函数值
 %% FINAL OBJECTIVE FUNCTION WITHOUT SMOOTHING
-[~,y] = solver_elasticity_Q1(x,F,H,freedofs,nelx,nely,E0,Emin);
+y = energies(loop);
 if print_to_file
     fprintf(fid, ' sharp interface energy: %11.6f\n', y);
     fprintf(fid, '--------------------------------------\n');
