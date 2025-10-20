@@ -1,6 +1,6 @@
 %%%% THRESHOLD DYNAMICS USING IMGAUSSFILT %%%%
 %** 最小单元尺度固定为1
-function [y, loop, loop_k, c,  x, energies, energies_k]=topthr_penlity(nelx, nely, volfrac, lambda, r0, g, sd, bc, continuation, x, fileID, V_constrain)
+function [y, loop, loop_k, c,  x, energies, energies_k]=topthr_penlity(nelx, nely, volfrac, lambda, p, r0, g, sd, bc, continuation, x, fileID, V_constrain,descent_type)
 % nelx: number of elements on x axis
 % nely: number of elements on y axis
 % volfrac: volume fraction of material to total area
@@ -94,24 +94,27 @@ while 1
         break;
     end
     if loop == 1
-        [ce,cq,c] = solver_heat(xPhys,nelx,nely,freedofs);
+        [ce,cq,c] = solver_heat_p(xPhys.^p,nelx,nely,freedofs);
         PG = gamma*sum(sum((1-x).*xPhys));
         energies(loop) = c + PG; %记录总能
         energies_k(loop) = energies(loop); %记录总能
     end
     %% Penalty Method--calculate g^k = （1/(2\ambda)-1）*(kapa(1)-kapa(2))*ce + (2-1/lambda)*(q(1)-q(2))*cq
-    gk = (0.5/lambda-1)*(kapa(1)-kapa(2))*ce + (2-1/lambda)*(q(1)-q(2))*cq;
+    gk = (1/lambda-2)*(kapa(1)-kapa(2))*p*xPhys.^(p-1).*ce ...
+        + 2*(q(1)-q(2))*p*xPhys.^(p-1).*cq;
     if sd > 0
         gk = imgaussfilt(gk, sd, 'Padding', 'symmetric');
     end
-    gk = (gk + gamma*(x-xPhys))/(1.5-1/lambda);
-    if loop == 1
+    gk = gk + gamma*(x-xPhys);
+    if loop == 1 && strcmp(descent_type, 'conjugate')
         gk0 = gk;
         wk = gk;
-    else
+    elseif loop > 1 && strcmp(descent_type, 'conjugate')
         betak = max(sum(sum(gk.*(gk-gk0)))/norm(gk0,2)^2,0); 
         wk = gk + betak*wk;
         gk0 = gk;
+    elseif strcmp(descent_type, 'gradient')
+        wk = gk;
     end
     phi = wk;
     %% Penalty Method--linear research parameter
@@ -135,6 +138,7 @@ while 1
     min_spacing = min(diff(sorted_A)); % 相邻元素最小间距
     if r <= r_min + 1;
         r = min(1/min_spacing,r0);
+        r_max = r;
     end
     %% Penalty Method--linear research
     while 1
@@ -163,7 +167,7 @@ while 1
             xnewPhys = xnew;
         end
         %% PLOT DENSITIES
-        [ce,cq,c] = solver_heat(xnewPhys,nelx,nely,freedofs);
+        [ce,cq,c] = solver_heat_p(xnewPhys.^p,nelx,nely,freedofs);
         til_c = c + gamma*sum(sum((1-x).*xPhys));
         energies_k(loop_k) = til_c;
         change = norm(xnew-x,1);%计算更新前后的区域的无穷范数
@@ -210,7 +214,7 @@ while 1
     end
 end
 set(gca,'Units','normalized','Position',[0 0 1 1]);  %# Modify axes size
-[~,~,c] = solver_heat(xPhys,nelx,nely,freedofs);
+[~,~,c] = solver_heat_p(xPhys.^p,nelx,nely,freedofs);
 loop = loop + 1;
 energies(loop) = c + gamma*sum(sum((1-x).*xPhys)); %计算最后的能
 

@@ -1,15 +1,17 @@
 % save the following output to this folder
 save_to_folder = false;
 % fileID for log file
-fileID = 'D:\Study\thresholding dynamics\ICTM-split-penlity\example1.log';
+fileID = 'D:\Study\thresholding dynamics\ICTM-split-penlity\example2.log';
 % whether calculate compliance with respect to the same Emin
 % parameters
 nelx = 200; 
 nely = 200;
 volfrac = 0.2; %体积占比
-lambda = 10000; %正则参数
-r      = 100; %邻近因子
-g = 0.01; %周长罚参数
+lambda = 1000000; %正则参数
+p      = 1.01; %隐式罚参数
+r      = 1000; %邻近因子
+g = 0.00001; %周长罚参数
+descent_type = 'gradient';
 sd = 1;
 %bc = 'left_Dirichlet'; %左端1/5Dirichlet边界
 bc = 'all_Dirichlet'; %完全Dirichlet边界
@@ -17,7 +19,7 @@ bc = 'all_Dirichlet'; %完全Dirichlet边界
 %bc = 'allleft_Dirichlet';
 continuation = 1; %是否使用预设初始形状，0：默认均匀初始值; 1：使用给定初始值
 V_constrain = 0; %0:等式体积约束，1：不等式体积约束
-xinitial = 3;
+xinitial = 2;
 x = zeros(nely,nelx);
 switch xinitial
     case 1 %中间一条1/5宽度的窄带
@@ -46,7 +48,7 @@ x(Ind) = 1;
 if continuation == 1
     figure; imshow(1-x);
 end
-[y,loop,loop_k,c,x,energies,energies_k]=topthr_penlity(nelx,nely,volfrac,lambda,r,g,sd,bc,continuation,x,fileID,V_constrain);
+[y,loop,loop_k,c,x,energies,energies_k]=topthr_penlity(nelx,nely,volfrac,lambda,p,r,g,sd,bc,continuation,x,fileID,V_constrain,descent_type);
 %% 绘制目标函数收敛曲线对比
 figure('Position', [100, 100, 800, 600]);  % 设置图形窗口大小
 
