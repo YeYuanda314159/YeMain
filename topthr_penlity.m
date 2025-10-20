@@ -94,14 +94,13 @@ while 1
         break;
     end
     if loop == 1
-        [ce,cq,c] = solver_heat_p(xPhys.^p,nelx,nely,freedofs);
+        [ce,cq,c] = solver_heat_p(xPhys,nelx,nely,freedofs,p);
         PG = gamma*sum(sum((1-x).*xPhys));
         energies(loop) = c + PG; %记录总能
         energies_k(loop) = energies(loop); %记录总能
     end
     %% Penalty Method--calculate g^k = （1/(2\ambda)-1）*(kapa(1)-kapa(2))*ce + (2-1/lambda)*(q(1)-q(2))*cq
-    gk = (1/lambda-2)*(kapa(1)-kapa(2))*p*xPhys.^(p-1).*ce ...
-        + 2*(q(1)-q(2))*p*xPhys.^(p-1).*cq;
+    gk = -2*lambda*dyfun(q(1),q(2),p,xPhys).*cq - dyfun(kapa(1),kapa(2),p,xPhys).*ce;
     if sd > 0
         gk = imgaussfilt(gk, sd, 'Padding', 'symmetric');
     end
@@ -167,7 +166,7 @@ while 1
             xnewPhys = xnew;
         end
         %% PLOT DENSITIES
-        [ce,cq,c] = solver_heat_p(xnewPhys.^p,nelx,nely,freedofs);
+        [ce,cq,c] = solver_heat_p(xnewPhys,nelx,nely,freedofs,p);
         til_c = c + gamma*sum(sum((1-x).*xPhys));
         energies_k(loop_k) = til_c;
         change = norm(xnew-x,1);%计算更新前后的区域的无穷范数
@@ -214,7 +213,7 @@ while 1
     end
 end
 set(gca,'Units','normalized','Position',[0 0 1 1]);  %# Modify axes size
-[~,~,c] = solver_heat_p(xPhys.^p,nelx,nely,freedofs);
+[~,~,c] = solver_heat_p(xPhys,nelx,nely,freedofs,p);
 loop = loop + 1;
 energies(loop) = c + gamma*sum(sum((1-x).*xPhys)); %计算最后的能
 

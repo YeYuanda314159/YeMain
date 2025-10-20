@@ -1,4 +1,4 @@
-function [ce,cq,c] = solver_heat_p(xPhys,nelx,nely,freedofs)
+function [ce,cq,c] = solver_heat_p(xPhys,nelx,nely,freedofs,p)
 %% MATERIAL PROPERTIES
 kapa = [10, 1];  %设置热导率
 q1 = 1; q2 = 100;
@@ -18,8 +18,8 @@ iM = reshape(edofMat',4*nelx*nely,1);
 
 %% FE-ANALYSIS
 %每个物理单元的刚度矩阵
-sK = reshape(KE(:)*(kapa(2)+xPhys(:)'*(kapa(1)-kapa(2))), 16*nelx*nely, 1);
-sF  = reshape(ME(:)*((q(1)-q(2))*xPhys(:)'+ q(2)), 4*nelx*nely, 1);
+sK = reshape(KE(:)*yfun(kapa(1),kapa(2),p,xPhys(:)'), 16*nelx*nely, 1);
+sF  = reshape(ME(:)*yfun(q(1),q(2),p,xPhys(:)'), 4*nelx*nely, 1);
 %重排前的矩阵每一列表示一个物理单元的刚度矩阵
 %xPhys(:),表示按列取数据将矩阵变成一列向量
 U = zeros((nely + 1)*(nelx + 1), 1); %解向量
@@ -30,5 +30,5 @@ U(freedofs) = K(freedofs,freedofs)\F(freedofs); %U是位移向量
 %U(edofMat)每行表示一个单元的自由节点位移
 ce = reshape(sum((U(edofMat)*KE).*U(edofMat),2),nely,nelx); %每个单元的单位热量 
 cq = reshape(sum(U(edofMat)/4,2),nely,nelx); %每个单元的温度
-c = sum(sum((kapa(2)+xPhys*(kapa(1)-kapa(2))).*ce)); %计算总能
+c = sum(sum(yfun(kapa(1),kapa(2),p,xPhys).*ce)); %计算总能
 end
