@@ -4,15 +4,15 @@ save_to_folder = false;
 fileID = 'D:\Study\thresholding dynamics\ICTM-split-penlity\example1.log';
 % whether calculate compliance with respect to the same Emin
 % parameters
-nelx = 200; 
-nely = 200;
+nelx = 400; 
+nely = 400;
 volfrac = 0.2; %体积占比
 lambda = 10000; %正则参数
 r      = 100; %邻近因子
 g = 0.01; %周长罚参数
 sd = 1;
-%bc = 'left_Dirichlet'; %左端1/5Dirichlet边界
-bc = 'all_Dirichlet'; %完全Dirichlet边界
+bc = 'left_Dirichlet'; %左端1/5Dirichlet边界
+%bc = 'all_Dirichlet'; %完全Dirichlet边界
 %bc = 'topleft_Dirichlet';
 %bc = 'allleft_Dirichlet';
 continuation = 1; %是否使用预设初始形状，0：默认均匀初始值; 1：使用给定初始值
