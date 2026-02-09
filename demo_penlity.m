@@ -4,22 +4,22 @@ save_to_folder = false;
 fileID = 'D:\Study\thresholding dynamics\ICTM-split-penlity\example1.log';
 % whether calculate compliance with respect to the same Emin
 % parameters
-nelx = 200; 
-nely = 200;
+nelx = 400; 
+nely = 400;
 volfrac = 0.2; %体积占比
 lambda = 0.1; %正则参数
-p      = -1; %隐式罚参数
+p      = -0.1; %隐式罚参数
 r      = 1000; %邻近因子
 g = 0.0000; %周长罚参数
 descent_type = 'gradient';
 sd = 1;
-%bc = 'left_Dirichlet'; %左端1/5Dirichlet边界
-bc = 'all_Dirichlet'; %完全Dirichlet边界
+bc = 'left_Dirichlet'; %左端1/5Dirichlet边界
+%bc = 'all_Dirichlet'; %完全Dirichlet边界
 %bc = 'topleft_Dirichlet';
 %bc = 'allleft_Dirichlet';
 continuation = 1; %是否使用预设初始形状，0：默认均匀初始值; 1：使用给定初始值
 V_constrain = 0; %0:等式体积约束，1：不等式体积约束
-xinitial = 3;
+xinitial = 1;
 x = zeros(nely,nelx);
 switch xinitial
     case 1 %中间一条1/5宽度的窄带
