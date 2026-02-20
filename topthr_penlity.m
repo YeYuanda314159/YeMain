@@ -101,7 +101,8 @@ while 1
         energies_k(loop) = energies(loop); %¼ÇÂ¼×ÜÄÜ
     end
     %% Penalty Method--calculate g^k = £¨1/(2\lambda)-1£©*(kapa(1)-kapa(2))*ce + (2-1/lambda)*(q(1)-q(2))*cq
-    gk = -2*lambda*dyfun(q(1),q(2),p,xPhys).*cq - dyfun(kapa(1),kapa(2),p,xPhys).*ce;
+    %gk = -2*lambda*dyfun(q(1),q(2),p,xPhys).*cq - dyfun(kapa(1),kapa(2),p,xPhys).*ce;
+    gk = -lambda^2/(lambda+2)*dyfun(q(1),q(2),p,xPhys).*cq - lambda/(lambda+2)*dyfun(kapa(1),kapa(2),p,xPhys).*ce;
     if sd > 0
         gk = imgaussfilt(gk, sd, 'Padding', 'symmetric');
     end
