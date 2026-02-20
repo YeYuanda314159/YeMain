@@ -18,7 +18,7 @@ plot(x,y4,'c', 'MarkerSize', 8, 'LineWidth', 1.5);
 hold on
 plot(x,y5,'k', 'MarkerSize', 8, 'LineWidth', 1.5);
 legend('p = 1','p=0.5','p=-0.5','p=-1','SIMP:3');
-title('系数族曲线对比', ...
+title('Comparison of Convexified Curves', ...
       'FontSize', 16, 'FontWeight', 'bold');
 % 设置网格
 grid on;

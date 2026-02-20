@@ -58,6 +58,7 @@ if continuation == 0 %采用均匀密度作为初值
     M = floor(nelx*nely*volfrac); %向下取整，\Omega1的元的数量
     x = repmat(volfrac,nely,nelx);
     xPhys = x; %matrix_dim = nely*nelx
+    figure; imshow(1-x);
 else
     M = nnz(x);%计算x的非零元个数
     if sd > 0 %磨光因子大于零，可以进行磨光
@@ -99,7 +100,7 @@ while 1
         energies(loop) = c + PG; %记录总能
         energies_k(loop) = energies(loop); %记录总能
     end
-    %% Penalty Method--calculate g^k = （1/(2\ambda)-1）*(kapa(1)-kapa(2))*ce + (2-1/lambda)*(q(1)-q(2))*cq
+    %% Penalty Method--calculate g^k = （1/(2\lambda)-1）*(kapa(1)-kapa(2))*ce + (2-1/lambda)*(q(1)-q(2))*cq
     gk = -2*lambda*dyfun(q(1),q(2),p,xPhys).*cq - dyfun(kapa(1),kapa(2),p,xPhys).*ce;
     if sd > 0
         gk = imgaussfilt(gk, sd, 'Padding', 'symmetric');
