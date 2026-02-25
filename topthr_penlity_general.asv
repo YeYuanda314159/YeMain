@@ -123,12 +123,12 @@ while 1
     end
     
     %% Penalty Method--calculate Phi = (1/E0-1/Emin)G_\epsilon*(E_0^{-1}\sigma:\varrho)+ gamma/\epsilon*(x - xPhys)
-    gk = -dY(E0,Emin,xPhys,p).*UV; %E_0^{-1}\sigma:\varrho = 1/A(\chi)^2 Ee(u):e(v)
+    gk = dY(E0,Emin,xPhys,p).*UV; %E_0^{-1}\sigma:\varrho = 1/A(\chi)^2 Ee(u):e(v)
     % filtering
     if sd > 0 
         gk = imgaussfilt(gk, sd, 'Padding', 'symmetric');
     end 
-    gk = gk+ g*(x - xPhys);
+    gk = gk+ g*(x - xPhys);%Gradient
     %共轭梯度法
     if loop == 1 && strcmp(descent_type, 'conjugate')
         gk0 = gk;
@@ -171,7 +171,7 @@ while 1
             break;
         end
         loop_k = loop_k + 1;
-        bar_Phi = x - r*Phi; %计算L^\infty中的 局部极小Phi
+        bar_Phi = x - r*Phi + g*(x - xPhys)); %计算L^\infty中的 局部极小Phi
         [~,I] = sort(bar_Phi(:),'descend'); %由大到小快速排序
         % Project
         xnew = zeros(nelx*nely, 1);
@@ -187,7 +187,7 @@ while 1
         else
             xPhys_new = xnew;
         end
-        [UV,c] = solver_elasticity_Q1(xPhys_new,F,H,freedofs,p); %计算试探的目标函数值
+        [UV,c] = solver_elasticity_Q1(xPhys,F,H,freedofs,p); %计算试探的目标函数值
         PG = g*sum(sum((1-xnew).*xPhys_new)); %计算新的周长约束
         til_c = c + PG;
         energies_k(loop_k) = til_c;
@@ -195,7 +195,7 @@ while 1
         %输出新图像
         cla(ax);  % 清除当前axes内容（保留axes设置）
         imshow(1-xnew, [], 'Parent', ax);  % 在同一axes显示新图像
-        title(ax, sprintf('iterations %d/%d', loop_k, maxtimes+1));
+        title(ax, sprintf('迭代 %d/%d', loop_k, maxtimes+1));
         colormap(ax, gray);
         drawnow;
         % PRINT RESULTS
