@@ -26,7 +26,7 @@ global nelx nely E0 Emin
 nelx = nelx0;
 nely = nely0;
 tol = 1;   %容许变化
-maxtimes = 150;  %最大迭代次数
+maxtimes = 250;  %最大迭代次数
 r = r0;
 gamma1 = 3;
 gamma2 = 1.5;
@@ -165,11 +165,11 @@ while 1
     end
     %% Penalty Method--linear research
     while 1
-        if loop_k > maxtimes
-            change = 0;
-            fprintf('线搜索结束4：超出最大迭代次数！\n');
-            break;
-        end
+%         if loop_k > maxtimes
+%             change = 0;
+%             fprintf('线搜索结束4：超出最大迭代次数！\n');
+%             break;
+%         end
         loop_k = loop_k + 1;
         bar_Phi = x - r*Phi; %计算L^\infty中的 局部极小Phi
         [~,I] = sort(bar_Phi(:),'descend'); %由大到小快速排序
@@ -195,7 +195,7 @@ while 1
         %输出新图像
         cla(ax);  % 清除当前axes内容（保留axes设置）
         imshow(1-xnew, [], 'Parent', ax);  % 在同一axes显示新图像
-        title(ax, sprintf('iterations %d/%d', loop_k, maxtimes+1));
+        title(ax, sprintf('iterations %d', loop_k));
         colormap(ax, gray);
         drawnow;
         % PRINT RESULTS

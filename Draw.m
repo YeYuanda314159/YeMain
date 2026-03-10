@@ -5,7 +5,7 @@ y = zeros(length(x),1);
 p = 10;
 miny = 1;
 for i = 1:length(x)
-    y(i) = maxcos(x(i),p);
+    y(i) = max(cos(x(i)),p);
     if y(i) < miny
         miny = y(i);
         minx = x(i);
